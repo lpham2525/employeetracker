@@ -18,6 +18,11 @@ function start() {
         "Add role",
         "Add department",
         "Update employee role",
+        "Update employee's manager",
+        "View employees by manager",
+        "Delete employee",
+        "Delete role",
+        "Delete department",
       ],
     },
   ])
@@ -44,6 +49,21 @@ function start() {
           break;
         case "Update employee role":
           updateRole();
+          break;
+        case "Update employee's manager":
+          updateManager();
+          break;
+        case "View employees by manager":
+          viewEmpByBoss();
+          break;
+        case "Delete employee":
+          deleteEmployee();
+          break;
+        case "Delete role":
+          deleteRole();
+          break;
+        case "Delete department":
+          deleteDept();
           break;
         default:
           break;
@@ -121,8 +141,7 @@ function addEmployee() {
     {
       type: "list",
       name: "roleId",
-      message:
-        `What is the role id of the employee? 
+      message: `What is the role id of the employee? 
         Choose among(1)lead researcher, 
         (2)researcher, 
         (3)lead engineer, 
@@ -132,11 +151,9 @@ function addEmployee() {
     {
       type: "list",
       name: "managerId",
-      message:
-        `Who is the manager of the new employee? 
+      message: `Who is the manager of the new employee? 
         Choose (34) for Shang Li and (56) for Mushu Red.`,
-      choices: [34, 56]
-      //is it possible to change choices to display all current employees, including newly added ones?
+      choices: [34, 56],
     },
   ])
     .then((info) => {
@@ -180,7 +197,6 @@ function addRole() {
       message: `To which department does the new role belong? 
       Choose (11) for research and (12) for engineering`,
       choices: [11, 12],
-      //Change to include all depts, including newly added ones?
     },
   ])
     .then((info) => {
@@ -223,10 +239,9 @@ function addDept() {
           if (err) {
             console.error(err);
           }
-          console.log("New department added!")
+          console.log("New department added!");
           console.table(info);
           proceed();
-         ;
         }
       );
     })
@@ -241,13 +256,11 @@ function updateRole() {
       message: `What is the id of the employee whom you would like to update?
       Choose (1)Shang Li, (2) Mulan Hua, (3) Mushu Red, (4) Cri Kee`,
       choices: [1, 2, 3, 4],
-      //change to included newly added employees?
     },
     {
       type: "list",
       name: "newEmployeeRole",
-      message:
-        `What is the new role of the employee? 
+      message: `What is the new role of the employee? 
         Choose among (1)lead researcher, (2)researcher, 
         (3)lead engineer, (4)engineer`,
       choices: [1, 2, 3, 4],
@@ -270,4 +283,119 @@ function updateRole() {
     .catch((err) => console.log(err));
 }
 
+function updateManager() {
+  prompt([
+    {
+      type: "list",
+      name: "employeeId",
+      message: `What is the id of the employee whom you would like to update?
+      Choose (1)Shang Li, (2) Mulan Hua, (3) Mushu Red, (4) Cri Kee`,
+      choices: [1, 2, 3, 4],
+    },
+    {
+      type: "list",
+      name: "newManager",
+      message: `What is the manager id of the employee's new manager? 
+          Choose (34) for Shang Li and (56) for Mushu Red.`,
+      choices: [34, 56],
+    },
+  ])
+    .then((info) => {
+      console.log(info);
+      db.query(
+        "UPDATE employee SET ? WHERE ?",
+        [{ manager_id: info.newManager }, { id: `${info.employeeId}` }],
+        (err, info) => {
+          if (err) {
+            console.error(err);
+          }
+          console.table(info);
+          proceed();
+        }
+      );
+    })
+    .catch((err) => console.log(err));
+}
+
+function viewEmpByBoss() {
+  db.query("SELECT * FROM employee", (err, info) => {
+    if (err) {
+      console.error(err);
+    }
+    console.table(info);
+    proceed();
+  });
+}
+
+function deleteEmployee() {
+  prompt([
+    {
+      type: "list",
+      name: "id",
+      message: `What is the id of the employee whom you would like to delete?
+      Choose (1)Shang Li, (2) Mulan Hua, (3) Mushu Red, (4) Cri Kee`,
+      choices: [1, 2, 3, 4],
+    },
+  ]).then((info) => {
+    console.log(info);
+    db.query(
+      "DELETE FROM employee WHERE ?",
+      { id: `${info.id}` },
+      (err, info) => {
+        if (err) {
+          console.log(err);
+        }
+        console.table(info);
+        console.log("Employee terminated.");
+        proceed();
+      }
+    );
+  });
+}
+
+function deleteRole() {
+  prompt([
+    {
+      type: "list",
+      name: "role",
+      message: "Which you would like to delete?",
+      choices: ["lead researcher", "researcher", "lead engineer", "engineer"],
+    },
+  ]).then((info) => {
+    console.log(info);
+    db.query("DELETE FROM role WHERE ?", { title: info.role }, (err, info) => {
+      if (err) {
+        console.log(err);
+      }
+      console.table(info);
+      console.log("Role terminated.");
+      proceed();
+    });
+  });
+}
+
+function deleteDept() {
+  prompt([
+    {
+      type: "list",
+      name: "dept",
+      message: "Which department you would like to delete?",
+      choices: ["research", "engineering"],
+    },
+  ]).then((info) => {
+    console.log(info);
+    db.query(
+      "DELETE FROM department WHERE ?",
+      { name: info.dept },
+      (err, info) => {
+        if (err) {
+          console.log(err);
+        }
+        console.table(info);
+        console.log("Department terminated.");
+        proceed();
+      }
+    );
+  });
+}
 start();
