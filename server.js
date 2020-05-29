@@ -2,6 +2,7 @@ const cTable = require('console.table')
 const mySql = require('mysql2')
 const { prompt } = require('inquirer')
 const db = require('./db')
+// const orm = require("./orm")
 
 function start () {
   console.log('Welcome!')
@@ -19,9 +20,11 @@ function start () {
         'Add department',
         'Update employee role',
         "Update employee's manager",
+        'View employees by manager',
         'Delete employee',
         'Delete role',
-        'Delete department'
+        'Delete department',
+        'View department budget'
       ]
     }
   ])
@@ -51,6 +54,9 @@ function start () {
         case "Update employee's manager":
           updateManager()
           break;
+        case 'View employees by manager':
+          viewEmpByBoss()
+          break;
         case 'Delete employee':
           deleteEmployee()
           break;
@@ -60,6 +66,10 @@ function start () {
         case 'Delete department':
           deleteDept()
           break;
+        case 'View department budget':
+          viewDeptBudget()
+        default:
+          break
       }
     })
     .catch((err) => console.error(err))
@@ -261,8 +271,7 @@ function updateRole () {
   ])
     .then((info) => {
       console.log(info)
-      db.query(
-        'UPDATE employee SET ? WHERE ?',
+      db.query('UPDATE employee SET ? WHERE ?',
         [{ role_id: info.newEmployeeRole }, { id: `${info.employeeId}` }],
         (err, info) => {
           if (err) {
@@ -310,6 +319,37 @@ function updateManager () {
     .catch((err) => console.log(err))
 }
 
+function viewEmpByBoss () {
+  db.query('SELECT * FROM employee WHERE manager_id is NULL', (err, managers) =>{
+    const managersArr = managers.map(({ id, first_name, last_name }) => ({
+      name: `${first_name} ${last_name}`,
+      value: id
+    }))
+    prompt([
+      {
+        type: 'list',
+        name: 'manager',
+        message: 'For which manager would you like to see the employees?',
+        choices: managersArr
+      }
+    ])
+      .then((info) => {
+        console.log(info)
+        db.query('SELECT first_name, last_name FROM employee WHERE ? ',
+          { manager_id: info.manager },
+          (err, employees) => {
+            if (err) {
+              console.error(err)
+            }
+            console.table(employees)
+            proceed()
+          })
+      })
+      .catch((err) => console.log(err))
+
+ })
+}
+
 function deleteEmployee () {
   prompt([
     {
@@ -349,18 +389,14 @@ function deleteRole () {
   ])
     .then((info) => {
       console.log(info)
-      db.query(
-        'DELETE FROM role WHERE ?',
-        { title: info.role },
-        (err, info) => {
-          if (err) {
-            console.log(err)
-          }
-          console.table(info)
-          console.log('Role terminated.')
-          proceed()
+      db.query('DELETE FROM role WHERE ?', { title: info.role }, (err, info) => {
+        if (err) {
+          console.log(err)
         }
-      )
+        console.table(info)
+        console.log('Role terminated.')
+        proceed()
+      })
     })
     .catch((err) => console.log(err))
 }
@@ -373,21 +409,42 @@ function deleteDept () {
       message: 'Which department is being deleted?',
       choices: ['research', 'engineering']
     }
+  ]).then((info) => {
+    console.log(info)
+    db.query(
+      'DELETE FROM department WHERE ?',
+      { name: info.dept },
+      (err, info) => {
+        if (err) {
+          console.log(err)
+        }
+        console.table(info)
+        console.log('Department terminated.')
+        proceed()
+      }
+    )
+  })
+    .catch((err) => console.log(err))
+}
+
+function viewDeptBudget () {
+  prompt([
+    {
+      type: 'list',
+      name: 'dept',
+      message: 'What is the department id of the department budget would you like to view? Choose (11) for research and (12) for engineering.',
+      choices: [11, 12]
+    }
   ])
     .then((info) => {
       console.log(info)
-      db.query(
-        'DELETE FROM department WHERE ?',
-        { name: info.dept },
-        (err, info) => {
-          if (err) {
-            console.log(err)
-          }
-          console.table(info)
-          console.log('Department terminated.')
-          proceed()
+      db.query('SELECT sum(role.salary) FROM role WHERE ?', { department_id: info.dept }, (err, budget) => {
+        if (err) {
+          console.error(err)
         }
-      )
+        console.log(budget)
+        proceed()
+      })
     })
     .catch((err) => console.log(err))
 }
